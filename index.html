@@ -87,7 +87,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .sheet .btns .btn{margin:0}
 @media(min-width:640px){
   .modal{align-items:center}.sheet{border-radius:18px}
-  .home-grid{grid-template-columns:repeat(3,1fr)}
+  .home-grid{grid-template-columns:repeat(2,1fr)}
   .tile{flex-direction:column;align-items:flex-start;padding:22px}
   .filters{grid-template-columns:2fr 1fr 1fr 1fr 1fr}.filters .full{grid-column:auto}
 }
@@ -104,6 +104,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
       <button class="tile" onclick="go('form')"><div class="ic">＋</div><div><b>Cargar recordatorio</b><span>Pagos, tareas y grabaciones</span></div></button>
       <button class="tile" onclick="go('pend')"><div class="ic">✓</div><div><b>Ver pendientes</b><span>Lo que falta hacer o pagar</span></div></button>
       <button class="tile" onclick="go('grab')"><div class="ic">🎙</div><div><b>Ver grabaciones</b><span>Estado de pago por fecha y músico</span></div></button>
+      <button class="tile" onclick="go('hist')"><div class="ic">🗂</div><div><b>Historial</b><span>Todo lo completado y pagado</span></div></button>
     </div>
   </section>
 
@@ -178,6 +179,24 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
     </div>
     <div id="grabList"></div>
   </section>
+
+  <!-- HISTORIAL -->
+  <section id="v-hist" class="view hidden">
+    <div class="top"><button class="back" onclick="go('home')" aria-label="Volver">←</button><div><h1>Historial</h1></div><button class="refresh" onclick="loadHist(true)">Actualizar</button></div>
+    <div class="kpis">
+      <div class="kpi"><small>Completados</small><div id="hCount">–</div></div>
+      <div class="kpi"><small>Total pagado</small><div id="hPag">–</div></div>
+      <div class="kpi"><small>Este mes</small><div id="hMes">–</div></div>
+    </div>
+    <div class="filters">
+      <div class="full"><label>Buscar</label><input id="hq" placeholder="Concepto o rubro" oninput="renderHist()"></div>
+      <div><label>Rubro</label><select id="hr" onchange="renderHist()"></select></div>
+      <div><label>Tipo</label><select id="ht" onchange="renderHist()"><option value="">Todos</option><option>A pagar</option><option>Por hacer</option></select></div>
+      <div><label>Desde</label><input id="hd1" type="date" onchange="renderHist()"></div>
+      <div><label>Hasta</label><input id="hd2" type="date" onchange="renderHist()"></div>
+    </div>
+    <div id="histList"></div>
+  </section>
 </div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)cerrarModal()">
@@ -231,6 +250,7 @@ function go(v) {
   window.scrollTo(0, 0);
   if (v === 'pend') loadPend();
   if (v === 'grab') loadGrab();
+  if (v === 'hist') loadHist(true);
 }
 
 /* ---------- init ---------- */
@@ -392,6 +412,7 @@ async function confirmar() {
   try {
     const r = await api('completarPendiente', id);
     S.pend = S.pend.filter(x => x.id !== id);
+    S.hist = null;
     S.grab = null;
     toast(r.yaCompletado ? 'Ya estaba completado' : 'Completado ✓' + (r.grabaciones ? ' · grabación marcada como Pagado' : ''));
   } catch (e) {
@@ -437,6 +458,51 @@ function renderGrab() {
       <div class="row"><div class="t">${esc(g.concepto)}</div>${g.monto != null ? `<div class="amt">${money(g.monto)}</div>` : ''}</div>
       <div class="meta"><span class="tag ${pagado ? 'st-pag' : 'st-pend'}">${esc(g.estado)}</span><span class="tag grabt">🎙 ${fmtD(g.fechaGrab)}</span><span class="tag">${g.musicos.length} músico${g.musicos.length === 1 ? '' : 's'}</span>${pagado && g.fin ? `<span class="tag">Pagado ${esc(fmtD(g.fin.slice(0, 10)))}</span>` : ''}</div>
       <div class="chips">${g.musicos.map(x => `<span class="chip"${x === m ? ' style="border-color:#111827;font-weight:600"' : ''}>${esc(x)}</span>`).join('')}</div>
+    </div></div>`;
+  }).join('');
+}
+
+/* ---------- historial ---------- */
+async function loadHist(force) {
+  if (S.hist && !force) return renderHist();
+  if (!S.hist) $('#histList').innerHTML = '<div class="loading">Cargando…</div>';
+  try {
+    S.hist = await api('listHistorial');
+    const rs = [...new Set(S.hist.map(x => x.rubro))].sort((a, b) => a.localeCompare(b, 'es'));
+    const cur = $('#hr').value;
+    $('#hr').innerHTML = '<option value="">Todos</option>' + rs.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+    $('#hr').value = cur;
+    renderHist();
+  } catch (e) {
+    $('#histList').innerHTML = `<div class="empty">No se pudo cargar: ${esc(e.message)}<button class="btn ghost" onclick="loadHist(true)">Reintentar</button></div>`;
+  }
+}
+
+function renderHist() {
+  if (!S.hist) return;
+  const q = norm($('#hq').value), r = $('#hr').value, t = $('#ht').value, d1 = $('#hd1').value, d2 = $('#hd2').value;
+  const list = S.hist.filter(p => {
+    const f = p.fin.slice(0, 10);
+    return (!q || norm(p.concepto + ' ' + p.rubro).includes(q)) && (!r || p.rubro === r) && (!t || p.tipo === t) &&
+      (!d1 || f >= d1) && (!d2 || f <= d2);
+  });
+  const pag = list.filter(p => p.tipo === 'A pagar');
+  const mes = hoy().slice(0, 7);
+  $('#hCount').textContent = list.length;
+  $('#hPag').textContent = money(pag.reduce((s, p) => s + (p.monto || 0), 0)) || '$ 0';
+  $('#hMes').textContent = money(pag.filter(p => p.fin.slice(0, 7) === mes).reduce((s, p) => s + (p.monto || 0), 0)) || '$ 0';
+  if (!list.length) { $('#histList').innerHTML = `<div class="empty">${S.hist.length ? 'Nada coincide con los filtros.' : 'Todavía no hay nada completado.'}</div>`; return; }
+  $('#histList').innerHTML = list.map(p => {
+    const g = isGrab(p.rubro);
+    return `<div class="item"><div class="body">
+      <div class="row"><div class="t">${esc(p.concepto)}</div>${p.monto != null ? `<div class="amt">${money(p.monto)}</div>` : ''}</div>
+      <div class="meta">
+        <span class="tag st-pag">✓ ${esc(fmtD(p.fin.slice(0, 10)))} ${esc(p.fin.slice(11))}</span>
+        <span class="tag ${p.tipo === 'A pagar' ? 'pay' : 'todo'}">${esc(p.tipo)}</span>
+        <span class="tag${g ? ' grabt' : ''}">${esc(p.rubro)}</span>
+        ${p.fecha ? `<span class="tag">Previsto ${fmtD(p.fecha)}</span>` : ''}
+      </div>
+      ${g && p.musicos.length ? `<div class="chips">${p.musicos.map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>` : ''}
     </div></div>`;
   }).join('');
 }
