@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Pendientes · Yami &amp; Feli</title>
+<meta name="theme-color" content="#111827">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --soft:#f3f4f6;
+  --brand:#111827; --accent:#2563eb; --ok:#059669; --bad:#dc2626; --r:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 96px}
+.top{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.top h1{font-size:20px;margin:0;letter-spacing:-.01em}
+.top .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.back{width:40px;height:40px;flex:none;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:18px;cursor:pointer;color:var(--ink)}
+.refresh{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.home-grid{display:grid;gap:12px}
+.tile{display:flex;align-items:center;gap:14px;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit;transition:border-color .15s}
+.tile:hover{border-color:#c7cbd1}
+.tile .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:var(--soft);flex:none}
+.tile b{display:block;font-size:16px}
+.tile span{color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.kpi small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.kpi div{font-weight:700;font-size:16px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi.bad div{color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+label.f{display:block;font-size:13px;font-weight:600;margin:16px 0 6px}
+label.f:first-child{margin-top:0}
+label.f em{font-weight:400;color:var(--muted);font-style:normal}
+input,select{width:100%;font:inherit;font-size:16px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,#6b7280 50%),linear-gradient(135deg,#6b7280 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--soft);padding:4px;border-radius:12px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{text-align:center;padding:11px;border-radius:9px;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg input:checked+label{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.btn{display:block;width:100%;padding:15px;border:0;border-radius:12px;background:var(--brand);color:#fff;font:inherit;font-weight:600;font-size:16px;margin-top:22px;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);margin-top:10px}
+.grab{border-top:1px dashed var(--line);margin-top:20px;padding-top:4px}
+.grab-title{font-size:12px;font-weight:700;color:var(--ok);text-transform:uppercase;letter-spacing:.05em;margin-top:14px}
+.mus{display:grid;gap:6px}
+@media(min-width:560px){.mus{grid-template-columns:1fr 1fr}.mus .all{grid-column:1/-1}}
+.chk{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:15px;user-select:none}
+.chk input{width:22px;height:22px;flex:none;accent-color:var(--brand);padding:0;-webkit-appearance:checkbox;appearance:auto}
+.chk.all{background:var(--soft);font-weight:600}
+.count{font-size:12px;color:var(--muted);margin-top:6px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.filters .full{grid-column:1/-1}
+.filters input,.filters select{padding:10px;font-size:15px}
+.filters label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+.item{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:8px;transition:opacity .2s}
+.item .done{width:28px;height:28px;flex:none;accent-color:var(--ok);margin:1px 0 0;padding:0;-webkit-appearance:checkbox;appearance:auto;cursor:pointer}
+.item .body{flex:1;min-width:0}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.t{font-weight:600;overflow-wrap:anywhere}
+.amt{font-weight:700;white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;font-size:12px;color:var(--muted)}
+.tag{background:var(--soft);padding:3px 8px;border-radius:999px}
+.tag.pay{background:#eff6ff;color:#1d4ed8}
+.tag.todo{background:#f5f3ff;color:#6d28d9}
+.tag.late{background:#fef2f2;color:var(--bad);font-weight:600}
+.tag.grabt{background:#ecfdf5;color:#047857}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 8px;background:#fff}
+.item.busy{opacity:.45;pointer-events:none}
+.empty,.loading{text-align:center;color:var(--muted);padding:40px 16px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,140px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;transition:transform .25s;z-index:50;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.toast.show{transform:translate(-50%,0)}
+.toast.err{background:var(--bad)}
+.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:flex-end;justify-content:center;z-index:40}
+.modal.show{display:flex}
+.sheet{background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:22px}
+.sheet h3{margin:0 0 6px;font-size:17px}
+.sheet p{margin:0;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.sheet .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.sheet .btns .btn{margin:0}
+@media(min-width:640px){
+  .modal{align-items:center}.sheet{border-radius:18px}
+  .home-grid{grid-template-columns:repeat(3,1fr)}
+  .tile{flex-direction:column;align-items:flex-start;padding:22px}
+  .filters{grid-template-columns:2fr 1fr 1fr 1fr 1fr}.filters .full{grid-column:auto}
+}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HOME -->
+  <section id="v-home" class="view">
+    <div class="top"><div><h1>Pendientes</h1><div class="sub" id="user">Yami &amp; Feli</div></div></div>
+    <div class="home-grid">
+      <button class="tile" onclick="go('form')"><div class="ic">＋</div><div><b>Cargar recordatorio</b><span>Pagos, tareas y grabaciones</span></div></button>
+      <button class="tile" onclick="go('pend')"><div class="ic">✓</div><div><b>Ver pendientes</b><span>Lo que falta hacer o pagar</span></div></button>
+      <button class="tile" onclick="go('grab')"><div class="ic">🎙</div><div><b>Ver grabaciones</b><span>Historial por fecha y músico</span></div></button>
+    </div>
+  </section>
+
+  <!-- FORM -->
+  <section id="v-form" class="view hidden">
+    <div class="top"><button class="back" onclick="go('home')" aria-label="Volver">←</button><div><h1>Cargar recordatorio</h1></div></div>
+    <form id="form" class="card" onsubmit="guardar(event)" autocomplete="off" novalidate>
+      <label class="f" for="rubro">Rubro</label>
+      <select id="rubro" onchange="onRubro()"></select>
+      <input id="rubroNuevo" class="hidden" placeholder="Nombre del rubro nuevo" maxlength="60" oninput="onRubro()" style="margin-top:8px">
+
+      <label class="f">Tipo</label>
+      <div class="seg">
+        <input type="radio" name="tipo" id="t1" value="A pagar" onchange="onTipo()"><label for="t1">A pagar</label>
+        <input type="radio" name="tipo" id="t2" value="Por hacer" onchange="onTipo()"><label for="t2">Por hacer</label>
+      </div>
+
+      <label class="f" for="concepto">Concepto</label>
+      <input id="concepto" maxlength="300" placeholder="Ej: Pago sala de ensayo">
+
+      <label class="f" for="monto">Monto <em id="montoHint">(opcional)</em></label>
+      <input id="monto" inputmode="decimal" placeholder="$ 0">
+
+      <label class="f" for="fecha">Fecha prevista</label>
+      <input id="fecha" type="date">
+
+      <div id="grabBox" class="grab hidden">
+        <div class="grab-title">Datos de la grabación</div>
+        <label class="f" for="fechaGrab">Fecha de grabación</label>
+        <input id="fechaGrab" type="date">
+        <label class="f">Músicos participantes</label>
+        <div class="mus" id="musList"></div>
+        <div class="count" id="musCount">0 seleccionados</div>
+      </div>
+
+      <button class="btn" id="btnGuardar" type="submit">Guardar pendiente</button>
+    </form>
+  </section>
+
+  <!-- PENDIENTES -->
+  <section id="v-pend" class="view hidden">
+    <div class="top"><button class="back" onclick="go('home')" aria-label="Volver">←</button><div><h1>Pendientes</h1></div><button class="refresh" onclick="loadPend(true)">Actualizar</button></div>
+    <div class="kpis">
+      <div class="kpi"><small>Activos</small><div id="kCount">–</div></div>
+      <div class="kpi"><small>A pagar</small><div id="kPagar">–</div></div>
+      <div class="kpi" id="kVencBox"><small>Vencidos</small><div id="kVenc">–</div></div>
+    </div>
+    <div class="filters">
+      <div class="full"><label>Buscar</label><input id="fq" placeholder="Concepto o rubro" oninput="renderPend()"></div>
+      <div><label>Rubro</label><select id="fr" onchange="renderPend()"></select></div>
+      <div><label>Tipo</label><select id="ft" onchange="renderPend()"><option value="">Todos</option><option>A pagar</option><option>Por hacer</option></select></div>
+      <div><label>Desde</label><input id="fd1" type="date" onchange="renderPend()"></div>
+      <div><label>Hasta</label><input id="fd2" type="date" onchange="renderPend()"></div>
+    </div>
+    <div id="pendList"></div>
+  </section>
+
+  <!-- GRABACIONES -->
+  <section id="v-grab" class="view hidden">
+    <div class="top"><button class="back" onclick="go('home')" aria-label="Volver">←</button><div><h1>Grabaciones</h1></div><button class="refresh" onclick="loadGrab(true)">Actualizar</button></div>
+    <div class="kpis">
+      <div class="kpi"><small>Grabaciones</small><div id="gCount">–</div></div>
+      <div class="kpi"><small>Participaciones</small><div id="gPart">–</div></div>
+      <div class="kpi"><small>Monto total</small><div id="gMonto">–</div></div>
+    </div>
+    <div class="filters">
+      <div class="full"><label>Buscar</label><input id="gq" placeholder="Concepto" oninput="renderGrab()"></div>
+      <div class="full" style="grid-column:span 2"><label>Músico</label><select id="gm" onchange="renderGrab()"></select></div>
+      <div><label>Desde</label><input id="gd1" type="date" onchange="renderGrab()"></div>
+      <div><label>Hasta</label><input id="gd2" type="date" onchange="renderGrab()"></div>
+    </div>
+    <div id="grabList"></div>
+  </section>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)cerrarModal()">
+  <div class="sheet">
+    <h3>¿Marcar como completado?</h3>
+    <p id="mTxt"></p>
+    <div class="btns"><button class="btn ghost" onclick="cerrarModal()">Cancelar</button><button class="btn" onclick="confirmar()">Completar</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TZ = 'America/Argentina/Cordoba';
+const S = { rubros: [], musicos: [], pend: null, grab: null, busy: new Set(), reqId: null, modalId: null };
+const $ = s => document.querySelector(s);
+
+const API_URL = 'https://script.google.com/macros/s/AKfycbyr_iU281YQwssDcqafKCoj23qclJo4ohSa1qUrlCmzH8Wr1xXMlQ7PaRa4dHZOPmj4YQ/exec';
+async function api(fn, ...args) {
+  let res;
+  try {
+    res = await fetch(API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn, args }) });
+  } catch (e) { throw new Error('Sin conexión. Revisá internet y probá de nuevo.'); }
+  let j;
+  try { j = await res.json(); } catch (e) { throw new Error('Respuesta inválida del servidor (' + res.status + ').'); }
+  if (!j.ok) throw new Error(j.error || 'Error desconocido');
+  return j.data;
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+const isGrab = r => norm(r) === 'grabacion';
+const money = n => n == null || isNaN(n) ? '' : n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const fmtD = s => s ? s.split('-').reverse().join('/') : '';
+const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+
+function newReq() {
+  const r = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(16) + Math.random().toString(16).slice(2));
+  S.reqId = r.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase();
+}
+
+let toastT;
+function toast(msg, err) {
+  const t = $('#toast');
+  t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast' + (err ? ' err' : ''), err ? 5000 : 2600);
+}
+
+function go(v) {
+  document.querySelectorAll('.view').forEach(x => x.classList.add('hidden'));
+  $('#v-' + v).classList.remove('hidden');
+  window.scrollTo(0, 0);
+  if (v === 'pend') loadPend();
+  if (v === 'grab') loadGrab();
+}
+
+/* ---------- init ---------- */
+async function init() {
+  resetForm();
+  try {
+    const d = await api('getInitData');
+    S.rubros = d.rubros; S.musicos = d.musicos;
+    if (d.user) $('#user').textContent = d.user;
+    fillRubros(); fillMusicos();
+  } catch (e) { toast('No pude conectar con la planilla: ' + e.message, true); }
+}
+
+function fillRubros() {
+  const cur = $('#rubro').value;
+  $('#rubro').innerHTML = '<option value="">Elegí un rubro…</option>' +
+    S.rubros.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('') +
+    '<option value="__new">＋ Agregar rubro nuevo</option>';
+  if (cur) $('#rubro').value = cur;
+  const fcur = $('#fr').value;
+  $('#fr').innerHTML = '<option value="">Todos</option>' + S.rubros.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  $('#fr').value = fcur;
+}
+
+function fillMusicos() {
+  $('#musList').innerHTML =
+    '<label class="chk all"><input type="checkbox" id="musAll" onchange="toggleAll(this.checked)"> Seleccionar todos</label>' +
+    S.musicos.map((m, i) => `<label class="chk"><input type="checkbox" class="m-chk" value="${esc(m)}" onchange="musChange()"> ${esc(m)}</label>`).join('');
+  musChange();
+}
+function toggleAll(v) { document.querySelectorAll('.m-chk').forEach(c => c.checked = v); musChange(); }
+function musChange() {
+  const all = document.querySelectorAll('.m-chk'), sel = document.querySelectorAll('.m-chk:checked');
+  $('#musCount').textContent = sel.length + ' de ' + all.length + ' seleccionados';
+  const a = $('#musAll'); if (a) a.checked = all.length > 0 && sel.length === all.length;
+}
+
+/* ---------- form ---------- */
+function rubroActual() { const v = $('#rubro').value; return v === '__new' ? $('#rubroNuevo').value.trim() : v; }
+function onRubro() {
+  $('#rubroNuevo').classList.toggle('hidden', $('#rubro').value !== '__new');
+  $('#grabBox').classList.toggle('hidden', !isGrab(rubroActual()));
+}
+function onTipo() {
+  const t = (document.querySelector('input[name=tipo]:checked') || {}).value;
+  $('#montoHint').textContent = t === 'A pagar' ? '(obligatorio)' : '(opcional)';
+}
+function resetForm() {
+  $('#form').reset();
+  $('#fecha').value = hoy();
+  $('#rubroNuevo').classList.add('hidden');
+  $('#grabBox').classList.add('hidden');
+  onTipo(); musChange(); newReq();
+}
+
+function parseMonto(s) {
+  s = String(s || '').trim().replace(/\$|\s/g, '');
+  if (!s) return null;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');          // 150.000,50
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');         // 150.000
+  const n = Number(s);
+  return isFinite(n) ? n : NaN;
+}
+
+async function guardar(ev) {
+  ev.preventDefault();
+  const b = $('#btnGuardar'); if (b.disabled) return;
+  const rubro = rubroActual();
+  const tipo = (document.querySelector('input[name=tipo]:checked') || {}).value;
+  const concepto = $('#concepto').value.trim();
+  const monto = parseMonto($('#monto').value);
+  const fecha = $('#fecha').value;
+  let fechaGrab = '', musicos = [];
+  const errs = [];
+  if (!rubro) errs.push('Elegí un rubro.');
+  if (!tipo) errs.push('Elegí el tipo: A pagar o Por hacer.');
+  if (!concepto) errs.push('Completá el concepto.');
+  if (Number.isNaN(monto) || (monto != null && monto < 0)) errs.push('El monto no es válido.');
+  if (tipo === 'A pagar' && !(monto > 0)) errs.push('Cargá el monto a pagar.');
+  if (!fecha) errs.push('Elegí la fecha prevista.');
+  if (isGrab(rubro)) {
+    fechaGrab = $('#fechaGrab').value;
+    musicos = [...document.querySelectorAll('.m-chk:checked')].map(x => x.value);
+    if (!fechaGrab) errs.push('Elegí la fecha de grabación.');
+    if (!musicos.length) errs.push('Seleccioná al menos un músico.');
+  }
+  if (errs.length) { toast(errs[0], true); return; }
+
+  b.disabled = true; b.textContent = 'Guardando…';
+  try {
+    const r = await api('crearPendiente', { reqId: S.reqId, rubro, tipo, concepto, monto, fecha, fechaGrab, musicos });
+    toast(r.duplicado ? 'Ya estaba guardado ✓' : 'Pendiente guardado ✓');
+    if (!S.rubros.some(x => norm(x) === norm(rubro))) { S.rubros.push(rubro); S.rubros.sort((a, c) => a.localeCompare(c, 'es')); fillRubros(); }
+    resetForm();
+    loadPend(true, true); // refresca la lista en segundo plano
+  } catch (e) {
+    toast(e.message, true); // se conserva reqId: si reintenta, no se duplica
+  } finally {
+    b.disabled = false; b.textContent = 'Guardar pendiente';
+  }
+}
+
+/* ---------- pendientes ---------- */
+async function loadPend(force, silent) {
+  if (S.pend && !force) return renderPend();
+  if (!silent) $('#pendList').innerHTML = '<div class="loading">Cargando…</div>';
+  try { S.pend = await api('listPendientes'); renderPend(); }
+  catch (e) {
+    if (!silent) $('#pendList').innerHTML = `<div class="empty">No se pudo cargar: ${esc(e.message)}<button class="btn ghost" onclick="loadPend(true)">Reintentar</button></div>`;
+  }
+}
+
+function renderPend() {
+  if (!S.pend) return;
+  const q = norm($('#fq').value), r = $('#fr').value, t = $('#ft').value, d1 = $('#fd1').value, d2 = $('#fd2').value, today = hoy();
+  const list = S.pend.filter(p =>
+    (!q || norm(p.concepto + ' ' + p.rubro).includes(q)) && (!r || p.rubro === r) && (!t || p.tipo === t) &&
+    (!d1 || p.fecha >= d1) && (!d2 || p.fecha <= d2));
+  const venc = list.filter(p => p.fecha && p.fecha < today).length;
+  $('#kCount').textContent = list.length;
+  $('#kPagar').textContent = money(list.filter(p => p.tipo === 'A pagar').reduce((s, p) => s + (p.monto || 0), 0)) || '$ 0';
+  $('#kVenc').textContent = venc;
+  $('#kVencBox').classList.toggle('bad', venc > 0);
+
+  if (!list.length) { $('#pendList').innerHTML = `<div class="empty">${S.pend.length ? 'Ningún pendiente coincide con los filtros.' : 'No hay pendientes activos. 🎉'}</div>`; return; }
+  $('#pendList').innerHTML = list.map(p => {
+    const g = isGrab(p.rubro), late = p.fecha && p.fecha < today;
+    return `<div class="item${S.busy.has(p.id) ? ' busy' : ''}" id="it-${p.id}">
+      <input type="checkbox" class="done" aria-label="Marcar como completado" onchange="pedirCompletar('${p.id}', this)">
+      <div class="body">
+        <div class="row"><div class="t">${esc(p.concepto)}</div>${p.monto != null ? `<div class="amt">${money(p.monto)}</div>` : ''}</div>
+        <div class="meta">
+          <span class="tag ${p.tipo === 'A pagar' ? 'pay' : 'todo'}">${esc(p.tipo)}</span>
+          <span class="tag${g ? ' grabt' : ''}">${esc(p.rubro)}</span>
+          <span class="tag${late ? ' late' : ''}">${late ? 'Vencido · ' : ''}${fmtD(p.fecha)}</span>
+        </div>
+        ${g ? `<div class="meta">🎙 Grabación ${fmtD(p.fechaGrab)} · ${p.musicos.length} músico${p.musicos.length === 1 ? '' : 's'}</div>
+               <div class="chips">${p.musicos.map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>` : ''}
+      </div></div>`;
+  }).join('');
+}
+
+function pedirCompletar(id, el) {
+  el.checked = false;
+  if (S.busy.has(id)) return;
+  const p = S.pend.find(x => x.id === id); if (!p) return;
+  S.modalId = id;
+  $('#mTxt').textContent = p.concepto + (isGrab(p.rubro) ? ` — se registrará en Grabaciones con ${p.musicos.length} músico${p.musicos.length === 1 ? '' : 's'}.` : '');
+  $('#modal').classList.add('show');
+}
+function cerrarModal() { $('#modal').classList.remove('show'); S.modalId = null; }
+
+async function confirmar() {
+  const id = S.modalId; cerrarModal();
+  if (!id || S.busy.has(id)) return;
+  S.busy.add(id);
+  const el = $('#it-' + id); if (el) el.classList.add('busy');
+  try {
+    const r = await api('completarPendiente', id);
+    S.pend = S.pend.filter(x => x.id !== id);
+    S.grab = null;
+    toast(r.yaCompletado ? 'Ya estaba completado' : 'Completado ✓' + (r.grabaciones ? ` · ${r.grabaciones} registros en Grabaciones` : ''));
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    S.busy.delete(id);
+    renderPend();
+  }
+}
+
+/* ---------- grabaciones ---------- */
+async function loadGrab(force) {
+  if (S.grab && !force) return renderGrab();
+  $('#grabList').innerHTML = '<div class="loading">Cargando…</div>';
+  try {
+    S.grab = await api('listGrabaciones');
+    const set = new Set(S.musicos); S.grab.forEach(g => g.musicos.forEach(m => set.add(m)));
+    const cur = $('#gm').value;
+    $('#gm').innerHTML = '<option value="">Todos</option>' + [...set].sort((a, b) => a.localeCompare(b, 'es')).map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    $('#gm').value = cur;
+    renderGrab();
+  } catch (e) {
+    $('#grabList').innerHTML = `<div class="empty">No se pudo cargar: ${esc(e.message)}<button class="btn ghost" onclick="loadGrab(true)">Reintentar</button></div>`;
+  }
+}
+
+function renderGrab() {
+  if (!S.grab) return;
+  const q = norm($('#gq').value), m = $('#gm').value, d1 = $('#gd1').value, d2 = $('#gd2').value;
+  const list = S.grab.filter(g =>
+    (!q || norm(g.concepto).includes(q)) && (!m || g.musicos.includes(m)) &&
+    (!d1 || g.fechaGrab >= d1) && (!d2 || g.fechaGrab <= d2));
+  $('#gCount').textContent = list.length;
+  $('#gPart').textContent = list.reduce((s, g) => s + (m ? 1 : g.musicos.length), 0);
+  $('#gMonto').textContent = money(list.reduce((s, g) => s + (g.monto || 0), 0)) || '$ 0';
+  if (!list.length) { $('#grabList').innerHTML = `<div class="empty">${S.grab.length ? 'Ninguna grabación coincide con los filtros.' : 'Todavía no hay grabaciones finalizadas.'}</div>`; return; }
+  $('#grabList').innerHTML = list.map(g => `<div class="item"><div class="body">
+      <div class="row"><div class="t">${esc(g.concepto)}</div>${g.monto != null ? `<div class="amt">${money(g.monto)}</div>` : ''}</div>
+      <div class="meta"><span class="tag grabt">🎙 ${fmtD(g.fechaGrab)}</span><span class="tag">${g.musicos.length} músico${g.musicos.length === 1 ? '' : 's'}</span><span class="tag">Finalizada ${esc(fmtD(g.fin.slice(0, 10)))}</span></div>
+      <div class="chips">${g.musicos.map(x => `<span class="chip"${x === m ? ' style="border-color:#111827;font-weight:600"' : ''}>${esc(x)}</span>`).join('')}</div>
+    </div></div>`).join('');
+}
+
+init();
+</script>
+</body>
+</html>
