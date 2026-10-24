@@ -68,6 +68,9 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .tag.todo{background:#f5f3ff;color:#6d28d9}
 .tag.late{background:#fef2f2;color:var(--bad);font-weight:600}
 .tag.grabt{background:#ecfdf5;color:#047857}
+.tag.st-pend{background:#fffbeb;color:#b45309;font-weight:600}
+.tag.st-pag{background:#ecfdf5;color:#047857;font-weight:600}
+.kpi.warn div{color:#b45309}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
 .chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 8px;background:#fff}
 .item.busy{opacity:.45;pointer-events:none}
@@ -100,7 +103,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
     <div class="home-grid">
       <button class="tile" onclick="go('form')"><div class="ic">＋</div><div><b>Cargar recordatorio</b><span>Pagos, tareas y grabaciones</span></div></button>
       <button class="tile" onclick="go('pend')"><div class="ic">✓</div><div><b>Ver pendientes</b><span>Lo que falta hacer o pagar</span></div></button>
-      <button class="tile" onclick="go('grab')"><div class="ic">🎙</div><div><b>Ver grabaciones</b><span>Historial por fecha y músico</span></div></button>
+      <button class="tile" onclick="go('grab')"><div class="ic">🎙</div><div><b>Ver grabaciones</b><span>Estado de pago por fecha y músico</span></div></button>
     </div>
   </section>
 
@@ -163,12 +166,13 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
     <div class="top"><button class="back" onclick="go('home')" aria-label="Volver">←</button><div><h1>Grabaciones</h1></div><button class="refresh" onclick="loadGrab(true)">Actualizar</button></div>
     <div class="kpis">
       <div class="kpi"><small>Grabaciones</small><div id="gCount">–</div></div>
-      <div class="kpi"><small>Participaciones</small><div id="gPart">–</div></div>
-      <div class="kpi"><small>Monto total</small><div id="gMonto">–</div></div>
+      <div class="kpi" id="gPendBox"><small>Pago pendiente</small><div id="gPend">–</div></div>
+      <div class="kpi"><small>Pagado</small><div id="gPag">–</div></div>
     </div>
     <div class="filters">
       <div class="full"><label>Buscar</label><input id="gq" placeholder="Concepto" oninput="renderGrab()"></div>
-      <div class="full" style="grid-column:span 2"><label>Músico</label><select id="gm" onchange="renderGrab()"></select></div>
+      <div><label>Músico</label><select id="gm" onchange="renderGrab()"></select></div>
+      <div><label>Estado</label><select id="ge" onchange="renderGrab()"><option value="">Todos</option><option>Pago pendiente</option><option>Pagado</option></select></div>
       <div><label>Desde</label><input id="gd1" type="date" onchange="renderGrab()"></div>
       <div><label>Hasta</label><input id="gd2" type="date" onchange="renderGrab()"></div>
     </div>
@@ -322,6 +326,7 @@ async function guardar(ev) {
     if (!S.rubros.some(x => norm(x) === norm(rubro))) { S.rubros.push(rubro); S.rubros.sort((a, c) => a.localeCompare(c, 'es')); fillRubros(); }
     resetForm();
     loadPend(true, true); // refresca la lista en segundo plano
+    if (isGrab(rubro)) S.grab = null;
   } catch (e) {
     toast(e.message, true); // se conserva reqId: si reintenta, no se duplica
   } finally {
@@ -374,7 +379,7 @@ function pedirCompletar(id, el) {
   if (S.busy.has(id)) return;
   const p = S.pend.find(x => x.id === id); if (!p) return;
   S.modalId = id;
-  $('#mTxt').textContent = p.concepto + (isGrab(p.rubro) ? ` — se registrará en Grabaciones con ${p.musicos.length} músico${p.musicos.length === 1 ? '' : 's'}.` : '');
+  $('#mTxt').textContent = p.concepto + (isGrab(p.rubro) ? ` — la grabación pasa a "Pagado" (${p.musicos.length} músico${p.musicos.length === 1 ? '' : 's'}).` : '');
   $('#modal').classList.add('show');
 }
 function cerrarModal() { $('#modal').classList.remove('show'); S.modalId = null; }
@@ -388,7 +393,7 @@ async function confirmar() {
     const r = await api('completarPendiente', id);
     S.pend = S.pend.filter(x => x.id !== id);
     S.grab = null;
-    toast(r.yaCompletado ? 'Ya estaba completado' : 'Completado ✓' + (r.grabaciones ? ` · ${r.grabaciones} registros en Grabaciones` : ''));
+    toast(r.yaCompletado ? 'Ya estaba completado' : 'Completado ✓' + (r.grabaciones ? ' · grabación marcada como Pagado' : ''));
   } catch (e) {
     toast(e.message, true);
   } finally {
@@ -415,19 +420,25 @@ async function loadGrab(force) {
 
 function renderGrab() {
   if (!S.grab) return;
-  const q = norm($('#gq').value), m = $('#gm').value, d1 = $('#gd1').value, d2 = $('#gd2').value;
+  const q = norm($('#gq').value), m = $('#gm').value, e = $('#ge').value, d1 = $('#gd1').value, d2 = $('#gd2').value;
   const list = S.grab.filter(g =>
-    (!q || norm(g.concepto).includes(q)) && (!m || g.musicos.includes(m)) &&
+    (!q || norm(g.concepto).includes(q)) && (!m || g.musicos.includes(m)) && (!e || g.estado === e) &&
     (!d1 || g.fechaGrab >= d1) && (!d2 || g.fechaGrab <= d2));
+  const sum = st => list.filter(g => g.estado === st).reduce((s, g) => s + (g.monto || 0), 0);
+  const pend = sum('Pago pendiente');
   $('#gCount').textContent = list.length;
-  $('#gPart').textContent = list.reduce((s, g) => s + (m ? 1 : g.musicos.length), 0);
-  $('#gMonto').textContent = money(list.reduce((s, g) => s + (g.monto || 0), 0)) || '$ 0';
-  if (!list.length) { $('#grabList').innerHTML = `<div class="empty">${S.grab.length ? 'Ninguna grabación coincide con los filtros.' : 'Todavía no hay grabaciones finalizadas.'}</div>`; return; }
-  $('#grabList').innerHTML = list.map(g => `<div class="item"><div class="body">
+  $('#gPend').textContent = money(pend) || '$ 0';
+  $('#gPag').textContent = money(sum('Pagado')) || '$ 0';
+  $('#gPendBox').classList.toggle('warn', pend > 0);
+  if (!list.length) { $('#grabList').innerHTML = `<div class="empty">${S.grab.length ? 'Ninguna grabación coincide con los filtros.' : 'Todavía no hay grabaciones cargadas.'}</div>`; return; }
+  $('#grabList').innerHTML = list.map(g => {
+    const pagado = g.estado === 'Pagado';
+    return `<div class="item"><div class="body">
       <div class="row"><div class="t">${esc(g.concepto)}</div>${g.monto != null ? `<div class="amt">${money(g.monto)}</div>` : ''}</div>
-      <div class="meta"><span class="tag grabt">🎙 ${fmtD(g.fechaGrab)}</span><span class="tag">${g.musicos.length} músico${g.musicos.length === 1 ? '' : 's'}</span><span class="tag">Finalizada ${esc(fmtD(g.fin.slice(0, 10)))}</span></div>
+      <div class="meta"><span class="tag ${pagado ? 'st-pag' : 'st-pend'}">${esc(g.estado)}</span><span class="tag grabt">🎙 ${fmtD(g.fechaGrab)}</span><span class="tag">${g.musicos.length} músico${g.musicos.length === 1 ? '' : 's'}</span>${pagado && g.fin ? `<span class="tag">Pagado ${esc(fmtD(g.fin.slice(0, 10)))}</span>` : ''}</div>
       <div class="chips">${g.musicos.map(x => `<span class="chip"${x === m ? ' style="border-color:#111827;font-weight:600"' : ''}>${esc(x)}</span>`).join('')}</div>
-    </div></div>`).join('');
+    </div></div>`;
+  }).join('');
 }
 
 init();
